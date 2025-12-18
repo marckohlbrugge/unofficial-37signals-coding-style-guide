@@ -6,7 +6,7 @@
 
 ## SSRF Protection
 
-**PR:** #1196
+**PR:** [#1196](https://github.com/basecamp/fizzy/pull/1196)
 
 ### The Pattern
 
@@ -118,7 +118,7 @@ end
 
 ## Delivery Pattern: Asynchronous with State Machine
 
-**PR:** #1196
+**PR:** [#1196](https://github.com/basecamp/fizzy/pull/1196)
 
 ### The Pattern
 
@@ -201,7 +201,7 @@ end
 
 ## Retry Strategy: Delinquency Tracking
 
-**PR:** #1196
+**PR:** [#1196](https://github.com/basecamp/fizzy/pull/1196)
 
 ### The Pattern
 
@@ -272,7 +272,7 @@ end
 
 ## Signature Verification: HMAC-SHA256
 
-**PR:** #1196
+**PR:** [#1196](https://github.com/basecamp/fizzy/pull/1196)
 
 ### The Pattern
 
@@ -325,7 +325,7 @@ end
 
 ## Background Job Integration
 
-**PR:** #1196
+**PR:** [#1196](https://github.com/basecamp/fizzy/pull/1196)
 
 ### The Pattern
 
@@ -393,7 +393,7 @@ end
 
 ## Testing Webhooks
 
-**PR:** #1196
+**PR:** [#1196](https://github.com/basecamp/fizzy/pull/1196)
 
 ### The Pattern
 
@@ -490,7 +490,7 @@ end
 
 ## Payload Formatting: Multi-Format Support
 
-**PR:** #1196
+**PR:** [#1196](https://github.com/basecamp/fizzy/pull/1196)
 
 ### The Pattern
 
@@ -576,7 +576,7 @@ end
 
 ## Data Retention: Automatic Cleanup
 
-**PR:** #1292
+**PR:** [#1292](https://github.com/basecamp/fizzy/pull/1292)
 
 ### The Pattern
 
