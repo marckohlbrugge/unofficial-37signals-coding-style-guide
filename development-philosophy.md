@@ -28,10 +28,15 @@
 
 ## DHH's Review Patterns
 
+See [dhh.md](dhh.md) for comprehensive review patterns extracted from 100+ PR reviews.
+
+Key themes:
 - Questions indirection: "Is this abstraction earning its keep?"
 - Pushes for directness - collapsed 6 notifier subclasses into 2 ([#425](https://github.com/basecamp/fizzy/pull/425))
 - Prefers explicit over clever (define methods directly vs introspection)
 - Removes "anemic" code that adds layers without value
+- Write-time operations over read-time computations
+- Database constraints over AR validations
 
 ## Common Review Themes
 

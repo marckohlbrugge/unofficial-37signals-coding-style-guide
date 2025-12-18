@@ -4,23 +4,7 @@
 
 ---
 
-## Environment-Specific Credentials
-
-### Per-Environment Credentials Files ([#554](https://github.com/basecamp/fizzy/pull/554))
-Move from a single `credentials.yml.enc` to environment-specific files:
-
-```bash
-config/credentials/production.yml.enc
-config/credentials/beta.yml.enc
-config/credentials/staging.yml.enc
-```
-
-**Why it matters:**
-- Different environments need different secrets (API keys, database URLs)
-- Prevents accidental secret sharing between environments
-- Cleaner separation of concerns
-
-### RAILS_MASTER_KEY Pattern ([#554](https://github.com/basecamp/fizzy/pull/554))
+## RAILS_MASTER_KEY Pattern ([#554](https://github.com/basecamp/fizzy/pull/554))
 ```bash
 # .kamal/secrets.production
 SECRETS=$(kamal secrets fetch --adapter 1password \
@@ -318,17 +302,17 @@ aliases:
 
 ## Configuration Organization Principles
 
-### 1. Default to Production Settings
+#### 1. Default to Production Settings
 Beta, staging inherit from production unless they need differences.
 
-### 2. ENV Variables Beat Config Files
+#### 2. ENV Variables Beat Config Files
 Runtime configuration wins over compile-time configuration.
 
-### 3. One Secret Per Environment
+#### 3. One Secret Per Environment
 Use `RAILS_MASTER_KEY` to unlock environment-specific credentials.
 
-### 4. Make Tests Self-Contained
+#### 4. Make Tests Self-Contained
 Tests shouldn't require external secrets or services.
 
-### 5. Development Should Be Flexible
+#### 5. Development Should Be Flexible
 Support both minimal (bare) and full-featured local environments.

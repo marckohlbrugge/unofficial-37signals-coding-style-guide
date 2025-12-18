@@ -9,451 +9,466 @@
 - Enable globally: `turbo_refreshes_with method: :morph, scroll: :preserve`
 - Listen for `turbo:morph-element` to restore client-side state
 - Use `data-turbo-permanent` for elements that shouldn't refresh
-- Ensure unique IDs - duplicates break morphing ([#1327](https://github.com/basecamp/fizzy/pull/1327))
+- Ensure unique IDs - duplicates break morphing
+- Set `refresh: :morph` on frames with `src` to prevent removal during morphs ([hotwired/turbo#1452](https://github.com/hotwired/turbo/pull/1452))
 
 ## Turbo Frames
 
-- Wrap form sections in frames to prevent reset on partial updates ([#696](https://github.com/basecamp/fizzy/pull/696))
-- Lazy-load expensive menus via frames ([#1089](https://github.com/basecamp/fizzy/pull/1089))
+- Wrap form sections in frames to prevent reset on partial updates
+- Lazy-load expensive content via frames with `loading: "lazy"`
 - Use `turbo_stream.replace` instead of redirects for in-place updates
-- Use `refresh: :morph` on lazy-loaded frames to prevent flicker ([#339](https://github.com/basecamp/fizzy/pull/339))
+- Use `refresh: :morph` on lazy-loaded frames to prevent flicker
+- Use `data-turbo-frame="_parent"` to target parent frame without knowing its ID ([hotwired/turbo#1446](https://github.com/hotwired/turbo/pull/1446))
+
+### Nested Frame Targeting
+
+Target parent frames without hardcoding IDs:
+
+```html
+<turbo-frame id="modal">
+  <turbo-frame id="search-results">
+    <!-- Component doesn't need to know parent's ID -->
+    <a href="/items/123" data-turbo-frame="_parent">
+      Select Item
+    </a>
+  </turbo-frame>
+</turbo-frame>
+```
 
 ## Common Turbo Issues
 
 | Problem | Solution |
 |---------|----------|
-| Timers not updating after morph | Bind to `turbo:morph` event ([#396](https://github.com/basecamp/fizzy/pull/396)) |
-| Forms resetting | Wrap in turbo frames ([#696](https://github.com/basecamp/fizzy/pull/696)) |
-| Pagination breaking | Ensure unique IDs ([#1327](https://github.com/basecamp/fizzy/pull/1327)) |
-| Flickering on replace | Use `method: :morph` ([#416](https://github.com/basecamp/fizzy/pull/416)) |
-| localStorage lost | Restore on `turbo:morph-element` ([#339](https://github.com/basecamp/fizzy/pull/339)) |
+| Timers not updating after morph | Bind to `turbo:morph-element` event |
+| Forms resetting on page refresh | Wrap in turbo frames |
+| Pagination breaking | Ensure unique IDs |
+| Flickering on replace | Use `method: :morph` |
+| localStorage state lost | Restore on `turbo:morph-element` |
 
 ## Stimulus Best Practices
 
 - Use **Values API** over `getAttribute()` - cleaner, type-coerced
 - Use **camelCase** in JavaScript (even for data attributes)
 - Always clean up in `disconnect()` - timers, listeners
-- Use `:self` action filter to scope events ([#1936](https://github.com/basecamp/fizzy/pull/1936))
-- Extract shared helpers to modules (`date_helpers.js`)
+- Use `:self` action filter to scope events
+- Extract shared helpers to modules (`date_helpers.js`, `timing_helpers.js`)
+
+### Timer Cleanup Pattern
+
+Always clean up intervals and timeouts in `disconnect()`:
+
+```javascript
+export default class extends Controller {
+  #timer
+
+  connect() {
+    this.#timer = setInterval(() => this.refresh(), 30_000)
+  }
+
+  disconnect() {
+    clearInterval(this.#timer)
+  }
+}
+```
+
+### Timing Helpers
+
+Extract common timing utilities to shared modules:
+
+```javascript
+// helpers/timing_helpers.js
+export function throttle(fn, delay = 1000) {
+  let timeoutId = null
+  return (...args) => {
+    if (!timeoutId) {
+      fn(...args)
+      timeoutId = setTimeout(() => timeoutId = null, delay)
+    }
+  }
+}
+
+export function debounce(fn, delay = 1000) {
+  let timeoutId = null
+  return (...args) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn.apply(this, args), delay)
+  }
+}
+
+export function nextFrame() {
+  return new Promise(requestAnimationFrame)
+}
+
+export function nextEvent(element, eventName) {
+  return new Promise(resolve => 
+    element.addEventListener(eventName, resolve, { once: true })
+  )
+}
+```
 
 ## State Persistence
 
-- localStorage for UI preferences (expanded panels, etc.)
+- localStorage for UI preferences (expanded panels, draft content)
 - Accept flash-of-collapsed-content as acceptable tradeoff
 - Restore state on `turbo:morph-element` events
-- Use `nextFrame()` helper to wait for morph completion ([#339](https://github.com/basecamp/fizzy/pull/339))
+- Use `nextFrame()` helper to wait for morph completion
+
+### Restoring localStorage on Morph
+
+```javascript
+export default class extends Controller {
+  static targets = ["input"]
+  static values = { key: String }
+
+  initialize() {
+    this.save = debounce(this.save.bind(this), 300)
+  }
+
+  connect() {
+    this.restoreContent()
+  }
+
+  save() {
+    const content = this.inputTarget.value
+    if (content) {
+      localStorage.setItem(this.keyValue, content)
+    } else {
+      localStorage.removeItem(this.keyValue)
+    }
+  }
+
+  async restoreContent() {
+    await nextFrame()
+    const saved = localStorage.getItem(this.keyValue)
+    if (saved) {
+      this.inputTarget.value = saved
+    }
+  }
+}
+```
+
+Wire it up to restore after morphs:
+
+```erb
+<%= form.text_area :body,
+      data: {
+        local_save_target: "input",
+        action: "input->local-save#save turbo:morph-element->local-save#restoreContent"
+      } %>
+```
 
 ## Links Over JavaScript
 
-- Filter chips as plain `<a>` tags, not JS-powered buttons ([#138](https://github.com/basecamp/fizzy/pull/138))
+- Filter chips as plain `<a>` tags, not JS-powered buttons
 - Better browser affordances (right-click, cmd+click)
 - Simpler, more declarative code
 - Let the browser do what browsers do
 
-## Morphing + Turbo Streams ([#416](https://github.com/basecamp/fizzy/pull/416))
+## Morphing + Turbo Streams
 
 When replacing content containing Turbo Frames:
+
 ```ruby
 render turbo_stream: turbo_stream.replace(
-  [@card, :container],
-  partial: "cards/container",
+  [@record, :container],
+  partial: "records/container",
   method: :morph  # Prevents flickering
 )
 ```
 
 Mark nested frames as permanent:
+
 ```erb
-<%= turbo_frame_tag card, :watch,
+<%= turbo_frame_tag record, :details,
     data: { turbo_permanent: true } %>
 ```
 
-## Element-Level Morph Events ([#490](https://github.com/basecamp/fizzy/pull/490))
+## Element-Level Morph Events
 
-Prefer element-specific events over global:
+Prefer element-specific events over global for better performance:
+
 ```ruby
 # In helper
-tag.time data: {
-  action: "turbo:morph-element->local-time#refreshTarget"
-}
+def local_datetime_tag(datetime, style: :time, **attributes)
+  tag.time datetime: datetime.to_i,
+    data: {
+      local_time_target: style,
+      action: "turbo:morph-element->local-time#refreshTarget"
+    }
+end
 ```
 
-More efficient than `turbo:morph@window`.
+More efficient than `turbo:morph@window` because it only fires on the specific element.
 
-## Turbo Frames Preserve Form State ([#696](https://github.com/basecamp/fizzy/pull/696))
+## Turbo Frames Preserve Form State
 
 Wrap independent sections in frames:
+
 ```erb
-<%= turbo_frame_tag @collection, :publication do %>
-  <!-- form -->
+<%= turbo_frame_tag @record, :settings do %>
+  <%= form_with model: @record do |form| %>
+    <!-- form fields -->
+  <% end %>
 <% end %>
 ```
 
 Respond with targeted replacement instead of redirect:
+
 ```ruby
-render turbo_stream: turbo_stream.replace(
-  [@collection, :publication],
-  partial: "collections/edit/publication"
-)
+def update
+  @record.update(record_params)
+  render turbo_stream: turbo_stream.replace(
+    [@record, :settings],
+    partial: "records/settings"
+  )
+end
 ```
 
-## POST + Turbo Streams for UI State ([#1091](https://github.com/basecamp/fizzy/pull/1091))
+## POST + Turbo Streams for UI State
 
-For state toggles (expand/collapse), use POST not GET:
+For state toggles (expand/collapse, watch/unwatch), use POST not GET:
+
 ```erb
-<%= link_to path, data: { turbo_method: "post" } %>
+<%= link_to toggle_path, data: { turbo_method: "post" } %>
 ```
 
 Controller returns stream update instead of redirect.
 
-## Frame Morphing Configuration ([#1327](https://github.com/basecamp/fizzy/pull/1327))
+## Frame Morphing Configuration
 
 Set `refresh: :morph` on frames with `src`:
-```ruby
-turbo_frame_tag(id, src: url, refresh: :morph)
+
+```erb
+<%= turbo_frame_tag "notifications",
+      src: notifications_path,
+      refresh: "morph" %>
 ```
 
 Prevents frame removal during page morphs.
 
-## Drag and Drop Patterns
+## Broadcasts with Turbo Streams
 
-### Architecture: Simple Drag Controller Over Complex Sortable ([#607](https://github.com/basecamp/fizzy/pull/607))
+### Model-Level Broadcasts
 
-For basic D&D between containers, use a focused drag-and-drop controller instead of heavyweight sortable libraries:
-
-**Why:** Simpler to reason about, less client-side state, lets server handle ordering logic.
-
-```javascript
-// app/javascript/controllers/drag_and_drop_controller.js
-export default class extends Controller {
-  static targets = [ "item", "container" ]
-  static values = { url: String }
-  static classes = [ "draggedItem", "hoverContainer" ]
-
-  async dragStart(event) {
-    event.dataTransfer.effectAllowed = "move"
-    event.dataTransfer.dropEffect = "move"
-    event.dataTransfer.setData("37ui/move", event.target)
-
-    await nextFrame() // Wait for drag to start
-    this.dragItem = this.#itemContaining(event.target)
-    this.sourceContainer = this.#containerContaining(this.dragItem)
-    this.dragItem.classList.add(this.draggedItemClass)
-  }
-
-  dragOver(event) {
-    event.preventDefault()
-    const container = this.#containerContaining(event.target)
-    this.#clearContainerHoverClasses()
-
-    if (container && container !== this.sourceContainer) {
-      container.classList.add(this.hoverContainerClass)
-    }
-  }
-
-  async drop(event) {
-    const container = this.#containerContaining(event.target)
-    if (!container || container === this.sourceContainer) return
-
-    this.wasDropped = true
-    await this.#submitDropRequest(this.dragItem, container)
-  }
-
-  dragEnd() {
-    this.dragItem.classList.remove(this.draggedItemClass)
-    this.#clearContainerHoverClasses()
-
-    if (this.wasDropped) {
-      this.dragItem.remove() // Optimistic removal
-    }
-
-    this.sourceContainer = null
-    this.dragItem = null
-    this.wasDropped = false
-  }
-}
-```
-
-**Key insights:**
-- Custom data type (`37ui/move`) prevents interference with other drags
-- Use `await nextFrame()` before applying drag classes (prevents visual glitches)
-- Track source container to prevent dropping on self
-- Optimistically remove on successful drop
-
-### Server-Side Re-render Strategy ([#607](https://github.com/basecamp/fizzy/pull/607))
-
-Let the server handle complex ordering/filtering instead of client-side manipulation:
+Use `broadcasts_refreshes` for automatic updates:
 
 ```ruby
-class Cards::DropsController < ApplicationController
-  def create
-    @card.reconsider # or @card.engage
+module Card::Broadcastable
+  extend ActiveSupport::Concern
 
-    # Re-render entire column - server knows correct order
-    render turbo_stream: turbo_stream.replace(
-      "#{@drop_target}-cards",
-      method: :morph,
-      partial: "cards/index/engagement/#{@drop_target}",
-      locals: page_and_filter.to_h
-    )
+  included do
+    broadcasts_refreshes
   end
 end
 ```
 
-**Why:** Server re-rendering the whole column is "good enough" and avoids:
-- Duplicating sorting logic in client
-- Managing complex client-side state
-- Out-of-sync client/server issues
-
-**Trade-off:** Slightly less smooth than pure client-side positioning, but much simpler.
-
-### Conditional Draggable Items ([#607](https://github.com/basecamp/fizzy/pull/607))
-
-Make draggability a render-time decision, not global:
+### Subscribing to Broadcasts
 
 ```erb
-<%# Only cards in certain columns are draggable %>
-<%= render partial: "cards/display/preview",
-           collection: page.records,
-           as: :card,
-           locals: { draggable: true } %>
+<%= turbo_stream_from Current.user, :notifications %>
 ```
 
-```erb
-<%# In the partial %>
-<% draggable = local_assigns.fetch(:draggable, false) %>
-<%= card_article_tag card,
-      draggable: draggable,
-      data: { id: card.id, drag_and_drop_target: "item" } %>
-```
+## Auto-Submit Forms
 
-**Why:** Not all instances of a component should be draggable. Context matters.
+Submit forms automatically on connect (useful for redirects/searches):
 
-**Cache consideration:** Include `draggable` in cache key:
-```ruby
-cache cacheable_preview_parts_for(card, draggable)
-```
+```javascript
+export default class extends Controller {
+  connect() {
+    this.element.addEventListener("turbo:submit-end", 
+      this.#handleSubmitEnd.bind(this), { once: true })
+    this.submit()
+  }
 
-### Drag Visual Feedback ([#607](https://github.com/basecamp/fizzy/pull/607), [#209](https://github.com/basecamp/fizzy/pull/209))
+  submit() {
+    this.element.setAttribute("aria-busy", "true")
+    this.element.requestSubmit()
+  }
 
-Provide clear visual states for drag interactions:
-
-```css
-.drag-and-drop__dragged-item {
-  box-shadow: none;
-  filter: grayscale(1) brightness(0.97);
-  opacity: 0.6;
-  outline: 2px dashed var(--color-selected-dark);
-}
-
-.drag-and-drop__hover-container {
-  background-color: var(--color-selected-light);
-  border-radius: 0.2em;
-  outline: 2px dashed var(--color-selected-dark);
-  transition: background-color 200ms;
+  #handleSubmitEnd(event) {
+    if (event.detail.success) {
+      this.element.remove()
+    } else {
+      this.element.setAttribute("aria-busy", "false")
+    }
+  }
 }
 ```
 
-**Disable hover states during drag ([#209](https://github.com/basecamp/fizzy/pull/209)):**
-```css
-ul:not(.dragging) {
-  li {
-    @media (hover: hover) {
-      &:hover {
-        background-color: var(--hover-color);
+## Auto-Save Forms
+
+Save forms automatically after changes with debouncing:
+
+```javascript
+const AUTOSAVE_INTERVAL = 3000
+
+export default class extends Controller {
+  #timer
+
+  disconnect() {
+    this.submit()
+  }
+
+  async submit() {
+    if (this.#dirty) {
+      await this.#save()
+    }
+  }
+
+  change(event) {
+    if (event.target.form === this.element && !this.#dirty) {
+      this.#scheduleSave()
+    }
+  }
+
+  #scheduleSave() {
+    this.#timer = setTimeout(() => this.#save(), AUTOSAVE_INTERVAL)
+  }
+
+  async #save() {
+    clearTimeout(this.#timer)
+    this.#timer = null
+    this.element.requestSubmit()
+  }
+
+  get #dirty() {
+    return !!this.#timer
+  }
+}
+```
+
+## Lazy Loading on Visibility
+
+Fetch content when element becomes visible:
+
+```javascript
+export default class extends Controller {
+  static values = { url: String }
+
+  connect() {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        this.#fetch()
+        observer.disconnect()
       }
-    }
+    })
+    observer.observe(this.element)
+  }
+
+  #fetch() {
+    get(this.urlValue, { responseKind: "turbo-stream" })
   }
 }
 ```
 
-**Why:** Prevents janky hover flickering while dragging.
+## Dialog Controller Pattern
 
-### Custom Drag Image ([#207](https://github.com/basecamp/fizzy/pull/207))
-
-Provide helpful drag feedback instead of browser default:
+Handle dialogs with proper accessibility and lazy-loading:
 
 ```javascript
-configureDrag(event) {
-  event.dataTransfer.setDragImage(this.dragImageTarget, 0, 0)
-}
-```
+export default class extends Controller {
+  static targets = ["dialog"]
+  static values = { modal: { type: Boolean, default: false } }
 
-```erb
-<div class="divider-drag-image" data-divider-target="dragImage">
-  Drag up or down
-</div>
-```
+  connect() {
+    this.dialogTarget.setAttribute("aria-hidden", "true")
+  }
 
-```css
-.divider-drag-image {
-  background-color: var(--color-link);
-  border-radius: 1rem;
-  color: var(--color-ink-reversed);
-  inset: auto 100% 100% auto; /* Position off-screen */
-  line-height: 2rem;
-  padding: 0 1rem;
-  position: fixed;
-  text-wrap: nowrap;
-}
-```
-
-**Why:** Browser default is often ugly/confusing. Custom image provides context.
-
-### Prevent Drag Jank with Overlap Threshold ([#209](https://github.com/basecamp/fizzy/pull/209))
-
-When dragging near boundaries, prevent jittery movement:
-
-```javascript
-const OVERLAP_THRESHOLD = 0.25
-
-moveDivider(event) {
-  if (event.target.nodeName == DIVIDER_ITEM_NODE_NAME) {
-    const rect = this.dividerTarget.getBoundingClientRect()
-    const distanceToTop = Math.abs(event.clientY - rect.top)
-    const distanceToBottom = Math.abs(event.clientY - (rect.top + rect.height))
-    const distanceToNearestEdge = Math.min(distanceToTop, distanceToBottom)
-    const overlap = distanceToNearestEdge / rect.height
-
-    if (overlap > OVERLAP_THRESHOLD) {
-      this.#moveDividerTo(this.#items.indexOf(event.target))
+  open() {
+    if (this.modalValue) {
+      this.dialogTarget.showModal()
+    } else {
+      this.dialogTarget.show()
     }
+    this.loadLazyFrames()
+    this.dialogTarget.setAttribute("aria-hidden", "false")
+  }
+
+  close() {
+    this.dialogTarget.close()
+    this.dialogTarget.setAttribute("aria-hidden", "true")
+  }
+
+  closeOnClickOutside({ target }) {
+    if (!this.element.contains(target)) this.close()
+  }
+
+  // Prevent morphing from closing open dialogs
+  preventCloseOnMorphing(event) {
+    if (event.detail?.attributeName === "open") {
+      event.preventDefault()
+    }
+  }
+
+  loadLazyFrames() {
+    this.dialogTarget.querySelectorAll("turbo-frame").forEach(frame => {
+      frame.loading = "eager"
+    })
   }
 }
 ```
 
-**Why:** Without threshold, tiny mouse movements cause rapid position changes, creating jank.
+## Copy to Clipboard
 
-**When to use:** Dragging between tightly-packed items with varying heights.
+Simple clipboard pattern with success feedback:
 
-### Accessibility for Drag Handles ([#207](https://github.com/basecamp/fizzy/pull/207))
+```javascript
+export default class extends Controller {
+  static values = { content: String }
+  static classes = ["success"]
 
-Always provide screen reader context:
+  async copy(event) {
+    event.preventDefault()
+    this.element.classList.remove(this.successClass)
+    this.element.offsetWidth // Force reflow for animation reset
+
+    try {
+      await navigator.clipboard.writeText(this.contentValue)
+      this.element.classList.add(this.successClass)
+    } catch {}
+  }
+}
+```
+
+## Hotkey Controller
+
+Handle keyboard shortcuts:
+
+```javascript
+export default class extends Controller {
+  click(event) {
+    if (this.#isClickable && !this.#shouldIgnore(event)) {
+      event.preventDefault()
+      this.element.click()
+    }
+  }
+
+  #shouldIgnore(event) {
+    return event.defaultPrevented || 
+           event.target.closest("input, textarea, [contenteditable]")
+  }
+
+  get #isClickable() {
+    return getComputedStyle(this.element).pointerEvents !== "none"
+  }
+}
+```
+
+Usage:
 
 ```erb
-<button class="bubbles-list__handle btn btn--reversed">
-  <%= image_tag "drag.svg", aria: { hidden: true }, size: 16 %>
-  <span class="for-screen-reader">Drag to change number of bubbles shown above</span>
+<button data-controller="hotkey"
+        data-action="keydown.n@document->hotkey#click">
+  New Item <kbd>N</kbd>
 </button>
 ```
 
-**Best practices:**
-- Make handle a `<button>` with descriptive hidden text
-- Mark decorative icon as `aria-hidden`
-- Describe the action outcome, not just "drag handle"
-
-### Progressive Installation ([#207](https://github.com/basecamp/fizzy/pull/207))
-
-Show drag UI only after JavaScript loads:
-
-```javascript
-connect() {
-  this.install()
-}
-
-install() {
-  this.#moveDividerTo(this.startCountValue)
-  this.dividerTarget.classList.add(this.installedClass)
-}
-```
-
-```css
-.bubbles-list__divider {
-  visibility: hidden; /* Hidden by default */
-}
-
-.bubbles-list__divider--installed {
-  visibility: visible; /* Show when JS ready */
-}
-```
-
-**Also restore after morphs:**
-```javascript
-data: {
-  action: "turbo:morph@document->divider#install"
-}
-```
-
-**Why:** Prevents flash of non-functional UI. Only show when interaction is ready.
-
-### Using @rails/request.js with Turbo ([#607](https://github.com/basecamp/fizzy/pull/607))
-
-Make `@rails/request.js` use Turbo's fetch for proper integration:
-
-```javascript
-// app/javascript/application.js
-window.fetch = Turbo.fetch
-```
-
-**Why:** Ensures request library respects Turbo's request interception/error handling.
-
-**When to use:** When using `post()` from `@rails/request.js` in Stimulus controllers.
-
-### Single-Purpose Drop Controllers ([#607](https://github.com/basecamp/fizzy/pull/607))
-
-Create focused controllers for specific drop behaviors:
-
-```ruby
-# app/controllers/cards/drops_controller.rb
-class Cards::DropsController < ApplicationController
-  def create
-    @card = find_card(params[:dropped_item_id])
-
-    case params[:drop_target]
-    when "considering"
-      @card.reconsider
-    when "doing"
-      @card.engage
-    end
-
-    render_column_replacement
-  end
-end
-```
-
-**Why not reuse existing controllers?**
-- Drop handling has unique response requirements (Turbo Streams)
-- Mixing with traditional CRUD muddies responsibility
-- Dedicated endpoint makes intent clear
-
-**Route as nested resource:**
-```ruby
-namespace :cards do
-  resources :drops
-end
-```
-
-### Prevent Nested Drag Conflicts ([#607](https://github.com/basecamp/fizzy/pull/607))
-
-Disable dragging on nested interactive elements:
-
-```erb
-<%= link_to path, draggable: false, class: "card__link" %>
-```
-
-**Why:** Links, buttons inside draggable items can trigger unwanted drags.
-
-**Apply to:** Links, nested drag handles, buttons within draggable containers.
-
-## Stimulus for Cached Fragment Personalization ([#124](https://github.com/basecamp/fizzy/pull/124))
+## Stimulus for Cached Fragment Personalization
 
 Cached partials can't access `Current.user`. Move user-specific styling to client-side:
 
 ```javascript
-// app/javascript/controllers/created_by_current_user_controller.js
-import { Controller } from "@hotwired/stimulus"
-
-export default class extends Controller {
-  static targets = ["creation"]
-  static classes = ["mine"]
-
-  creationTargetConnected(element) {
-    if (element.dataset.creatorId == Current.user.id) {
-      element.classList.add(this.mineClass)
-    }
-  }
-}
-
-// app/javascript/initializers/current.js
+// initializers/current.js
 class Current {
   get user() {
     const id = document.head.querySelector('meta[name="current-user-id"]')?.content
@@ -463,13 +478,343 @@ class Current {
 window.Current = new Current()
 ```
 
+```javascript
+// controllers/personalize_controller.js
+export default class extends Controller {
+  static targets = ["item"]
+  static classes = ["mine"]
+
+  itemTargetConnected(element) {
+    if (element.dataset.creatorId == Current.user?.id) {
+      element.classList.add(this.mineClass)
+    }
+  }
+}
+```
+
 ```erb
-<!-- In application.html.erb -->
+<!-- In layout -->
 <meta name="current-user-id" content="<%= Current.user&.id %>">
 
 <!-- Cached partial uses data attributes, not conditionals -->
 <div data-creator-id="<%= comment.creator_id %>"
-     data-created-by-current-user-target="creation">
+     data-personalize-target="item">
 ```
 
-**Use cases**: Highlighting own content, showing edit/delete buttons, user-specific badges in cached content.
+## Frame Reload on Document Morph
+
+Reload frames after document-level morphs:
+
+```javascript
+export default class extends Controller {
+  reload() {
+    this.element.reload()
+  }
+
+  morphReload(event) {
+    const newElement = event.detail.newElement
+    if (newElement?.tagName === "TURBO-FRAME") {
+      event.preventDefault()
+      this.element.reload()
+    }
+  }
+}
+```
+
+```erb
+<%= turbo_frame_tag "dynamic-content",
+      src: content_path,
+      data: {
+        controller: "frame",
+        action: "turbo:morph@document->frame#reload"
+      } %>
+```
+
+## Navigable List Pattern
+
+Keyboard-navigable lists with arrow key support:
+
+```javascript
+export default class extends Controller {
+  static targets = ["item"]
+  static values = {
+    selectionAttribute: { type: String, default: "aria-selected" },
+    actionableItems: { type: Boolean, default: false }
+  }
+
+  connect() {
+    this.selectFirst()
+  }
+
+  navigate(event) {
+    switch (event.key) {
+      case "ArrowDown": this.#selectNext(); break
+      case "ArrowUp": this.#selectPrevious(); break
+      case "Enter": this.#activateCurrent(event); break
+    }
+  }
+
+  selectFirst() {
+    this.#selectItem(this.#visibleItems[0])
+  }
+
+  #selectItem(item) {
+    if (!item) return
+    this.#clearSelection()
+    item.setAttribute(this.selectionAttributeValue, "true")
+    item.scrollIntoView({ block: "nearest" })
+    this.currentItem = item
+  }
+
+  #clearSelection() {
+    this.itemTargets.forEach(item => 
+      item.removeAttribute(this.selectionAttributeValue))
+  }
+
+  get #visibleItems() {
+    return this.itemTargets.filter(item => !item.hidden)
+  }
+
+  #selectNext() {
+    const index = this.#visibleItems.indexOf(this.currentItem)
+    if (index < this.#visibleItems.length - 1) {
+      this.#selectItem(this.#visibleItems[index + 1])
+    }
+  }
+
+  #selectPrevious() {
+    const index = this.#visibleItems.indexOf(this.currentItem)
+    if (index > 0) {
+      this.#selectItem(this.#visibleItems[index - 1])
+    }
+  }
+
+  #activateCurrent(event) {
+    if (this.actionableItemsValue && this.currentItem) {
+      const clickable = this.currentItem.querySelector("a,button")
+      clickable?.click()
+      event.preventDefault()
+    }
+  }
+}
+```
+
+## Turbo Permanent Elements
+
+Use `data-turbo-permanent` to preserve elements across navigations:
+
+```erb
+<!-- Footer frames that persist across page loads -->
+<div id="footer_frames" data-turbo-permanent>
+  <%= render "notifications/tray" %>
+  <%= render "quick_actions/bar" %>
+</div>
+
+<!-- Rich text editor content during morphs -->
+<div class="editor-content" data-turbo-permanent>
+  <%= form.rich_text_area :body %>
+</div>
+```
+
+## Testing Turbo Frames
+
+Use the built-in assertion helpers ([hotwired/turbo-rails#742](https://github.com/hotwired/turbo-rails/pull/742)):
+
+```ruby
+# Assert frame exists with specific attributes
+assert_turbo_frame "comments", loading: "lazy"
+assert_turbo_frame @user, :profile, target: "_top"
+
+# Assert frame contains specific content
+assert_turbo_frame "search-results" do
+  assert_select "li", count: 5
+end
+
+# Assert frame doesn't exist
+assert_no_turbo_frame "admin-panel"
+```
+
+## Turbo Flash Helper
+
+Create a helper for flash messages in Turbo Stream responses:
+
+```ruby
+module TurboFlash
+  extend ActiveSupport::Concern
+
+  included do
+    helper_method :turbo_stream_flash
+  end
+
+  private
+    def turbo_stream_flash(**flash_options)
+      turbo_stream.replace(:flash,
+        partial: "layouts/shared/flash",
+        locals: { flash: flash_options })
+    end
+end
+```
+
+Usage in controller:
+
+```ruby
+def create
+  @record = Record.create!(record_params)
+  render turbo_stream: [
+    turbo_stream.prepend("records", @record),
+    turbo_stream_flash(notice: "Created successfully")
+  ]
+end
+```
+
+## Drag and Drop Patterns
+
+### Simple Drag Controller
+
+For basic D&D between containers, use a focused controller instead of heavyweight sortable libraries:
+
+```javascript
+export default class extends Controller {
+  static targets = ["item", "container"]
+  static values = { url: String }
+  static classes = ["draggedItem", "hoverContainer"]
+
+  async dragStart(event) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.dropEffect = "move"
+    
+    await nextFrame() // Wait for drag to start
+    this.dragItem = event.target.closest("[data-drag-target='item']")
+    this.sourceContainer = this.dragItem.closest("[data-drag-target='container']")
+    this.dragItem.classList.add(this.draggedItemClass)
+  }
+
+  dragOver(event) {
+    event.preventDefault()
+    const container = event.target.closest("[data-drag-target='container']")
+    this.#clearContainerHoverClasses()
+
+    if (container && container !== this.sourceContainer) {
+      container.classList.add(this.hoverContainerClass)
+    }
+  }
+
+  async drop(event) {
+    const container = event.target.closest("[data-drag-target='container']")
+    if (!container || container === this.sourceContainer) return
+
+    this.wasDropped = true
+    // POST to server, let it re-render the column
+    await post(this.urlValue, {
+      body: JSON.stringify({
+        item_id: this.dragItem.dataset.id,
+        target: container.dataset.column
+      })
+    })
+  }
+
+  dragEnd() {
+    this.dragItem.classList.remove(this.draggedItemClass)
+    this.#clearContainerHoverClasses()
+    if (this.wasDropped) this.dragItem.remove()
+    this.sourceContainer = null
+    this.dragItem = null
+    this.wasDropped = false
+  }
+
+  #clearContainerHoverClasses() {
+    this.containerTargets.forEach(c => 
+      c.classList.remove(this.hoverContainerClass))
+  }
+}
+```
+
+**Key insights:**
+- Use `await nextFrame()` before applying drag classes (prevents visual glitches)
+- Track source container to prevent dropping on self
+- Optimistically remove on successful drop
+- Let the server handle ordering logic and re-render
+
+### Drag Visual Feedback
+
+```css
+.drag--dragged-item {
+  filter: grayscale(1) brightness(0.97);
+  opacity: 0.6;
+  outline: 2px dashed var(--color-accent);
+}
+
+.drag--hover-container {
+  background-color: var(--color-drop-zone);
+  outline: 2px dashed var(--color-accent);
+  transition: background-color 200ms;
+}
+
+/* Disable hover states during drag to prevent flicker */
+ul:not(.dragging) li:hover {
+  background-color: var(--hover-color);
+}
+```
+
+### Conditional Draggable Items
+
+Make draggability a render-time decision:
+
+```erb
+<%= render partial: "items/item",
+           collection: @items,
+           locals: { draggable: @allow_reorder } %>
+```
+
+```erb
+<%# In the partial %>
+<article draggable="<%= local_assigns.fetch(:draggable, false) %>"
+         data-drag-target="item"
+         data-id="<%= item.id %>">
+```
+
+### Accessibility for Drag Handles
+
+```erb
+<button class="drag-handle">
+  <%= image_tag "drag.svg", aria: { hidden: true } %>
+  <span class="visually-hidden">
+    Drag to reorder
+  </span>
+</button>
+```
+
+### Using @rails/request.js with Turbo
+
+Make `@rails/request.js` use Turbo's fetch for proper integration:
+
+```javascript
+// application.js
+window.fetch = Turbo.fetch
+```
+
+## Progressive Installation
+
+Show interactive UI only after JavaScript loads:
+
+```javascript
+connect() {
+  this.element.classList.add("installed")
+}
+```
+
+```css
+.interactive-widget {
+  visibility: hidden;
+}
+
+.interactive-widget.installed {
+  visibility: visible;
+}
+```
+
+Also restore after morphs:
+
+```erb
+data-action="turbo:morph@document->widget#install"
+```
