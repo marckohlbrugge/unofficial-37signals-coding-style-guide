@@ -44,7 +44,7 @@ end
 - Reject connection if either validation fails
 - Set `Current.account` so broadcasts respect tenant boundaries
 
-**From**: PR [#699](https://github.com/basecamp/fizzy/pull/699), [#1765](https://github.com/basecamp/fizzy/pull/1765), #1800
+**From**: PR [#699](https://github.com/basecamp/fizzy/pull/699), [#1765](https://github.com/basecamp/fizzy/pull/1765), [#1800](https://github.com/basecamp/fizzy/pull/1800)
 
 ### Testing Connection Authentication
 
@@ -145,7 +145,7 @@ end
 <% end %>
 ```
 
-**From**: PR [#1432](https://github.com/basecamp/fizzy/pull/1432), #1800
+**From**: PR [#1432](https://github.com/basecamp/fizzy/pull/1432), [#1800](https://github.com/basecamp/fizzy/pull/1800)
 
 ### Account-Scoped Broadcasts Prevent DoS
 
@@ -173,7 +173,7 @@ broadcasts_refreshes_to ->(board) { [ board.account, :all_boards ] }
 
 **Why it matters**: Broadcast targets often depend on model attributes. Lambdas allow dynamic resolution while keeping broadcast logic in the model.
 
-**From**: PR [#1765](https://github.com/basecamp/fizzy/pull/1765), #1800
+**From**: PR [#1765](https://github.com/basecamp/fizzy/pull/1765), [#1800](https://github.com/basecamp/fizzy/pull/1800)
 
 ## Turbo Stream Patterns
 
@@ -382,7 +382,7 @@ end
 
 **Why it matters**: Broadcast failures are silent in production. Testing ensures critical real-time updates actually happen.
 
-**From**: PR [#705](https://github.com/basecamp/fizzy/pull/705), #1810
+**From**: PR [#705](https://github.com/basecamp/fizzy/pull/705), [#1810](https://github.com/basecamp/fizzy/pull/1810)
 
 ### Test Adapter Configuration
 
