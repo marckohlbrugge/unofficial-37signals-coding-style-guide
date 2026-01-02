@@ -89,7 +89,7 @@ These are not Fizzy-specific implementation details. We deliberately skipped bus
 ## Acknowledgements
 
 - **[37signals](https://37signals.com)** for open-sourcing their codebase and giving the community a window into how they build software
-- **[Mateusz Zolkos](https://www.zolkos.com/2025/12/10/fizzys-pull-requests)** for his work identifying and cataloging the most educational PRs
+- **[Rob Zolkos](https://www.zolkos.com/2025/12/10/fizzys-pull-requests)** for his work identifying and cataloging the most educational PRs
 - **[Claude Code](https://claude.com/claude-code)** for creating this guide through iterative deep-dive research sessions
 
 ## Further Reading
