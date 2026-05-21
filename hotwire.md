@@ -12,6 +12,12 @@
 - Ensure unique IDs - duplicates break morphing
 - Set `refresh: :morph` on frames with `src` to prevent removal during morphs ([hotwired/turbo#1452](https://github.com/hotwired/turbo/pull/1452))
 
+### Why It Matters
+
+Turbo's page-refresh morphing mode updates only changed DOM regions and can preserve scroll position, which helps keep long, stateful pages stable during refreshes.
+
+**Source:** [Turbo Page Refreshes Handbook](https://turbo.hotwired.dev/handbook/page_refreshes)
+
 ## Turbo Frames
 
 - Wrap form sections in frames to prevent reset on partial updates
@@ -52,6 +58,12 @@ Target parent frames without hardcoding IDs:
 - Always clean up in `disconnect()` - timers, listeners
 - Use `:self` action filter to scope events
 - Extract shared helpers to modules (`date_helpers.js`, `timing_helpers.js`)
+
+### Why It Matters
+
+Stimulus Values provide typed read/write accessors and change callbacks for `data-*` state, which removes repetitive attribute parsing and keeps controller configuration explicit.
+
+**Source:** [Stimulus Values Reference](https://stimulus.hotwired.dev/reference/values)
 
 ### Timer Cleanup Pattern
 

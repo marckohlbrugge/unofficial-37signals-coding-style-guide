@@ -8,6 +8,12 @@
 
 Controllers should be thin orchestrators. Business logic lives in models.
 
+### Why It Matters
+
+Jamis Buck's classic "Skinny Controller, Fat Model" guidance argues this separation keeps behavior reusable and easier to test because controllers stay focused on request/response flow while models hold domain rules.
+
+**Source:** [Skinny Controller, Fat Model (Jamis Buck)](https://weblog.jamisbuck.org/2006/10/18/skinny-controller-fat-model)
+
 ```ruby
 # GOOD: Controller just orchestrates
 class Cards::ClosuresController < ApplicationController

@@ -36,6 +36,14 @@ end
 
 The ETag is computed from each object's `cache_key_with_version` (which includes `updated_at`), so any change to any object invalidates the cache.
 
+### Why It Matters
+
+Rails `fresh_when`/conditional GET support is built to return `304 Not Modified` when cache validators still match, which avoids unnecessary rendering and response transfer for unchanged content.
+
+**Sources:**
+- [ActionController::ConditionalGet API](https://api.rubyonrails.org/classes/ActionController/ConditionalGet.html)
+- [Caching with Rails Guide](https://guides.rubyonrails.org/caching_with_rails.html)
+
 ### Don't HTTP Cache Forms
 
 CSRF tokens get stale → 422 errors on submit ([#1607](https://github.com/basecamp/fizzy/pull/1607))
@@ -80,6 +88,12 @@ Changes to children automatically update parent timestamps:
 # View - workflow changes when any stage changes
 cache [card, card.collection.workflow]
 ```
+
+### Why It Matters
+
+Rails' Russian doll caching guidance explicitly recommends `touch: true` on dependent associations so parent cache keys change when nested records update, preventing stale outer fragments.
+
+**Source:** [Russian Doll Caching (Rails Guide)](https://guides.rubyonrails.org/caching_with_rails.html#russian-doll-caching)
 
 ### Domain Models for Cache Keys ([#1132](https://github.com/basecamp/fizzy/pull/1132))
 

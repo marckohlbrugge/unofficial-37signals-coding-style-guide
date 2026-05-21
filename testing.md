@@ -12,6 +12,12 @@
 - Faster boot time
 - Plain Ruby assertions
 
+### Why It Matters
+
+Rails ships with Minitest as the default stack, so staying on Minitest keeps the toolchain close to framework defaults and reduces extra DSL/framework surface area.
+
+**Source:** [Testing Rails Applications (Rails Guides)](https://guides.rubyonrails.org/testing.html)
+
 ## Fixtures Over Factories
 
 Fixtures provide deterministic, preloaded test data:
@@ -44,6 +50,12 @@ end
 - No runtime object creation overhead
 - Relationships are explicit and visible
 - Deterministic IDs for debugging
+
+### Why It Matters
+
+Rails fixtures are designed to preload stable sample data that can be referenced by label, which supports fast, deterministic tests and easier debugging of relational data.
+
+**Source:** [ActiveRecord::FixtureSet API](https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html)
 
 ## Fixture Relationships
 
@@ -138,6 +150,12 @@ class CardsControllerTest < ActionDispatch::IntegrationTest
 end
 ```
 
+### Why It Matters
+
+Rails positions integration tests as request-level verification of controller/routing/view interaction, which makes them a strong fit for end-to-end behavior of server-rendered flows.
+
+**Source:** [Testing Rails Applications (Integration Testing)](https://guides.rubyonrails.org/testing.html)
+
 ## System Tests
 
 Use Capybara for browser testing:
@@ -160,6 +178,12 @@ class CardSystemTest < ApplicationSystemTestCase
   end
 end
 ```
+
+### Why It Matters
+
+System tests exercise real browser behavior against the app, which catches interaction and JavaScript regressions that unit/integration tests can miss.
+
+**Source:** [Testing Rails Applications (System Testing)](https://guides.rubyonrails.org/testing.html)
 
 ## Test Helpers
 

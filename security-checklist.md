@@ -17,10 +17,14 @@
 
 Escape in helpers, not views ([#1114](https://github.com/basecamp/fizzy/pull/1114)).
 
+**Source:** [Rails Security Guide (XSS)](https://guides.rubyonrails.org/security.html)
+
 ## CSRF Protection
 
 ### Don't HTTP Cache Pages With Forms
 CSRF tokens get stale → 422 errors on form submit ([#1607](https://github.com/basecamp/fizzy/pull/1607))
+
+**Source:** [Rails Security Guide (CSRF)](https://guides.rubyonrails.org/security.html)
 
 ### Sec-Fetch-Site Header
 Additional CSRF check using browser's `Sec-Fetch-Site` header:
@@ -102,6 +106,8 @@ config.content_security_policy_report_only = ENV["CSP_REPORT_ONLY"] == "true"
 
 Use nonce-based script loading for importmap support.
 
+**Source:** [ActionController::ContentSecurityPolicy API](https://api.rubyonrails.org/classes/ActionController/ContentSecurityPolicy/ClassMethods.html)
+
 ## Sec-Fetch-Site as CSRF Fallback ([#1721](https://github.com/basecamp/fizzy/pull/1721), [#1751](https://github.com/basecamp/fizzy/pull/1751))
 
 ```ruby
@@ -133,6 +139,8 @@ class Memberships::EmailAddressesController < ApplicationController
   rate_limit to: 5, within: 1.hour, only: :create
 end
 ```
+
+**Source:** [ActionController::RateLimiting API](https://api.rubyonrails.org/classes/ActionController/RateLimiting/ClassMethods.html)
 
 **When to rate limit**:
 - Authentication actions (login, magic links, password resets)

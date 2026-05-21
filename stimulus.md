@@ -11,6 +11,14 @@
 - **Configured via values/classes** - No hardcoded strings
 - **Event-based communication** - Controllers dispatch events, don't call each other
 
+### Why It Matters
+
+Stimulus intentionally has "modest ambitions": it augments server-rendered HTML instead of replacing it, and the handbook emphasizes resilient, progressively enhanced behavior. Small, focused controllers align with that model and fail more gracefully when JavaScript is unavailable or partial.
+
+**Sources:**
+- [Stimulus: A modest JavaScript framework](https://stimulus.hotwired.dev/)
+- [Designing for Resilience (Stimulus Handbook)](https://stimulus.hotwired.dev/handbook/designing-for-resilience)
+
 ---
 
 ## Reusable Controllers Catalog

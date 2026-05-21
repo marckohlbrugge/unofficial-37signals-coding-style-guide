@@ -17,6 +17,12 @@
     locals: { card: @card } %>
 ```
 
+### Why It Matters
+
+Turbo Streams are built for targeted DOM operations (`append`, `replace`, `update`, etc.) delivered as HTML fragments, so you can update just the changed region instead of forcing full-page navigations.
+
+**Source:** [Turbo Streams Handbook](https://turbo.hotwired.dev/handbook/streams)
+
 ## Morphing for Complex Updates
 
 ```erb
@@ -97,6 +103,14 @@ class Card < ApplicationRecord
   belongs_to :board, touch: true  # Invalidates board cache
 end
 ```
+
+### Why It Matters
+
+Rails view caching guidance emphasizes cache-key correctness (including all context that affects output), plus touch chains/Russian-doll invalidation so nested updates don't leave stale fragments.
+
+**Sources:**
+- [Caching with Rails Guide](https://guides.rubyonrails.org/caching_with_rails.html)
+- [ActionView::Helpers::CacheHelper API](https://api.rubyonrails.org/classes/ActionView/Helpers/CacheHelper.html)
 
 ---
 
@@ -221,6 +235,12 @@ end
   <% end %>
 <% end %>
 ```
+
+### Why It Matters
+
+Turbo Frames create independent navigation contexts, so links/forms can update one page segment in place. That preserves surrounding UI state and reduces full-page churn for localized interactions.
+
+**Source:** [Turbo Frames Handbook](https://turbo.hotwired.dev/handbook/frames)
 
 ---
 

@@ -42,6 +42,12 @@ ActiveJob::Base.enqueue_after_transaction_commit = true
 Prevents jobs from running before the data they need exists.
 Fixes `ActiveStorage::FileNotFoundError` on uploads.
 
+### Why It Matters
+
+Rails documents transactional enqueue behavior to avoid a common race: jobs can execute before surrounding database changes are committed. Deferring enqueue until commit keeps job execution aligned with persisted state.
+
+**Source:** [Active Job Basics (Transactional Integrity)](https://guides.rubyonrails.org/active_job_basics.html)
+
 ## Error Handling
 
 ### Transient Errors ([#1924](https://github.com/basecamp/fizzy/pull/1924))
@@ -63,6 +69,12 @@ module SmtpDeliveryErrorHandling
   end
 end
 ```
+
+### Why It Matters
+
+Active Job's `retry_on` API supports `wait: :polynomially_longer` specifically for transient failures, spacing retries automatically so temporary network/provider issues can recover without immediate retry storms.
+
+**Source:** [ActiveJob::Exceptions API](https://api.rubyonrails.org/classes/ActiveJob/Exceptions.html)
 
 ### Permanent Failures
 

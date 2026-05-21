@@ -177,6 +177,12 @@ end
 add_column :boards, :cards_count, :integer, default: 0
 ```
 
+### Why It Matters
+
+Rails association docs call out counter caches as a way to avoid repeated `COUNT(*)` queries for common parent-child counts by storing/updating the count on the parent row.
+
+**Source:** [Active Record Associations Guide: Counter Cache](https://guides.rubyonrails.org/association_basics.html#counter-cache)
+
 ## Minimal Foreign Keys
 
 Fizzy uses `belongs_to` without database-level foreign keys in many places:

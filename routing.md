@@ -29,6 +29,8 @@ end
 
 **Why**: Standard REST verbs map cleanly to controller actions. No guessing what HTTP method to use.
 
+**Source:** [Rails Routing Guide](https://guides.rubyonrails.org/routing.html)
+
 ## Real Examples from Fizzy Routes
 
 ```ruby
@@ -110,6 +112,8 @@ end
 
 **Why**: This lets you use `url_for(@comment)` and get the correct card URL with anchor.
 
+**Source:** [Custom Polymorphic Routes (`resolve`)](https://api.rubyonrails.org/classes/ActionDispatch/Routing/Mapper/CustomUrls.html)
+
 ## Shallow Nesting
 
 Use `shallow: true` to avoid deep nesting:
@@ -124,6 +128,12 @@ end
 # /cards/:id                   (show, edit, update, destroy)
 ```
 
+### Why It Matters
+
+Rails routing docs recommend shallow nesting to avoid unnecessarily deep member routes while keeping collection routes contextual to the parent.
+
+**Source:** [Rails Routing Guide: Limits to Nesting](https://guides.rubyonrails.org/routing.html#limits-to-nesting)
+
 ## Singular Resources
 
 Use `resource` (singular) for one-per-parent resources:
@@ -135,6 +145,12 @@ resources :cards do
   resource :goldness     # A card is either golden or not
 end
 ```
+
+### Why It Matters
+
+Singular resources model one-off endpoints (no member ID in the path), matching cases where the route represents a single stateful relationship rather than a collection.
+
+**Source:** [Rails Routing Guide: Singular Resources](https://guides.rubyonrails.org/routing.html#singular-resources)
 
 ## Module Scoping
 

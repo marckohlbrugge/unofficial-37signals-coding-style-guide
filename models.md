@@ -8,6 +8,12 @@
 
 Models include many concerns, each handling one aspect:
 
+### Why It Matters
+
+`ActiveSupport::Concern` exists specifically to package shared behavior cleanly, including class-level API and dependency handling. Splitting model behavior into focused concerns keeps large domain models composable without packing everything into one class body.
+
+**Source:** [ActiveSupport::Concern API](https://api.rubyonrails.org/classes/ActiveSupport/Concern.html)
+
 ```ruby
 # app/models/card.rb
 class Card < ApplicationRecord
@@ -198,6 +204,12 @@ class Current < ActiveSupport::CurrentAttributes
   end
 end
 ```
+
+### Why It Matters
+
+`ActiveSupport::CurrentAttributes` provides a thread-isolated, per-request singleton that Rails resets around each request. That makes request context (`user`, `account`, `request_id`) available across models/services without manually threading those arguments everywhere.
+
+**Source:** [ActiveSupport::CurrentAttributes API](https://api.rubyonrails.org/classes/ActiveSupport/CurrentAttributes.html)
 
 ---
 
